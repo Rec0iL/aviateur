@@ -49,7 +49,7 @@ drone with minimal lag, supporting modern codecs and hardware acceleration.
    > **Note**: If the application fails to start, install
    the [Microsoft Visual C++ Redistributable](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist).
 
-### Linux
+### Linux (Debian13 or higher)
 
 1. Set up udev rules (required for non-root access):
     - Copy the provided `80-my8812au.rules` to `/lib/udev/rules.d/`. (You can change the vendor & product IDs to those of
@@ -59,10 +59,10 @@ drone with minimal lag, supporting modern codecs and hardware acceleration.
 2. Launch AppImage.
    > **Note**: If rules are not set, you must run the application with `root` privileges.
 
-### macOS
+### macOS (AppleSilicon)
 
-1. Build from source (see [Build Instructions](#-how-to-build)).
-2. Launch executable.
+1. Mount DMG, move the executable to Applications.
+2. Launch app.
 
 ## 🛠 How to Build
 
@@ -129,7 +129,7 @@ make
 - [ ] Zero-Copy YUV renderer.
 - [ ] Integrated Ground-side OSD.
 - [ ] Full MAVLink telemetry support.
-- [ ] Support for additional Wi-Fi chipsets.
+- [x] Support for additional Wi-Fi chipsets.
 
 ## 📄 License
 
