@@ -55,7 +55,7 @@ public:
         : AggregatorUDPv4(client_addr, client_port, keypair, epoch, channel_id, snd_buf_size) {}
 
 protected:
-    void send_to_socket(const uint8_t *payload, const uint16_t packet_size) override {
+    void send_to_socket(const uint8_t *payload, uint16_t packet_size) override {
         GuiInterface::Instance().rtpPktCount_++;
         GuiInterface::Instance().UpdateCount();
 
@@ -89,7 +89,7 @@ protected:
         prev_seq_num = seq_num;
 
         // Send payload via socket.
-        wfb_sendto(sockfd, (const char *)payload, packet_size, 0, (sockaddr *)&saddr, sizeof(saddr));
+        AggregatorUDPv4::send_to_socket(payload, packet_size);
     }
 
 private:
