@@ -36,7 +36,6 @@ drone with minimal lag, supporting modern codecs and hardware acceleration.
 
 ## ⚠️ Important Notes
 
-- **Adaptive Link**: Not currently supported on Windows.
 - **MAVLink**: Basic MAVLink telemetry support is on the roadmap but not yet fully implemented.
 
 ## 🚀 Quick Start
