@@ -221,6 +221,7 @@ std::shared_ptr<AVFrame> FfmpegDecoder::GetNextFrame() {
         return nullptr;
     }
 
+    // Outer loop: Keep reading packets (audio, empty, or incomplete video GOP) until a full video frame is ready.
     while (true) {
         // 1. First, try to receive a frame from the decoder (drain)
         {
@@ -228,67 +229,80 @@ std::shared_ptr<AVFrame> FfmpegDecoder::GetNextFrame() {
             if (!pFormatCtx || !sourceIsOpened) return nullptr;
 
             if (pVideoCodecCtx) {
-                std::shared_ptr<AVFrame> pFrameVideo = std::shared_ptr<AVFrame>(av_frame_alloc(), &freeFrame);
-                AVFrame *frameToReceive = pFrameVideo.get();
+                std::shared_ptr<AVFrame> latestVideoFrame = nullptr;
+                // Inner loop: Drain all backlogged frames from the decoder buffer and keep only the most recent one.
+                while (true) {
+                    std::shared_ptr<AVFrame> pFrameVideo = std::shared_ptr<AVFrame>(av_frame_alloc(), &freeFrame);
+                    AVFrame *frameToReceive = pFrameVideo.get();
 
 #ifdef __APPLE__
-                const bool zeroCopyThisFrame = hwDecoderEnabled && mZeroCopyEnabled;
+                    const bool zeroCopyThisFrame = hwDecoderEnabled && mZeroCopyEnabled;
 #else
-                const bool zeroCopyThisFrame = false;
+                    const bool zeroCopyThisFrame = false;
 #endif
 
-                if (hwDecoderEnabled && !zeroCopyThisFrame) {
-                    if (!hwFrame) {
-                        hwFrame = std::shared_ptr<AVFrame>(av_frame_alloc(), &freeFrame);
-                    }
-                    frameToReceive = hwFrame.get();
-                }
-
-                int ret = avcodec_receive_frame(pVideoCodecCtx, frameToReceive);
-                if (ret == 0) {
-                    // Check if resolution is valid
-                    if (frameToReceive->width <= 0 || frameToReceive->height <= 0) {
-                        av_frame_unref(frameToReceive);
-                        continue;
-                    }
-
-                    // Check if resolution has changed or was initially unknown
-                    if (frameToReceive->width != width || frameToReceive->height != height) {
-                        width = frameToReceive->width;
-                        height = frameToReceive->height;
-                        GuiInterface::Instance().PutLog(LogLevel::Info,
-                                                        "Video resolution updated: {}x{}",
-                                                        width,
-                                                        height);
-                        if (videoConfigChangedCallback) {
-                            videoConfigChangedCallback(width, height, GetVideoFrameFormat());
-                        }
-                    }
-
                     if (hwDecoderEnabled && !zeroCopyThisFrame) {
-                        if (dropCurrentVideoFrame) {
-                            dropCurrentVideoFrame = false;
-                            continue;
+                        if (!hwFrame) {
+                            hwFrame = std::shared_ptr<AVFrame>(av_frame_alloc(), &freeFrame);
                         }
-                        if (av_hwframe_transfer_data(pFrameVideo.get(), hwFrame.get(), 0) < 0) {
-                            GuiInterface::Instance().PutLog(LogLevel::Warn, "av_hwframe_transfer_data failed");
-                            continue;
-                        }
-                        av_frame_copy_props(pFrameVideo.get(), hwFrame.get());
-                    } else if (hwDecoderEnabled && zeroCopyThisFrame) {
-                        if (dropCurrentVideoFrame) {
-                            dropCurrentVideoFrame = false;
-                            continue;
-                        }
-                        // Zero-copy path: pFrameVideo already contains the hardware-decoded frame
-                        // No transfer needed - the CVPixelBuffer is directly accessible via data[3]
+                        frameToReceive = hwFrame.get();
                     }
-                    if (gotVideoFrameCallback) gotVideoFrameCallback(pFrameVideo);
-                    return pFrameVideo;
-                } else if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF) {
-                    char errStr[AV_ERROR_MAX_STRING_SIZE];
-                    av_strerror(ret, errStr, AV_ERROR_MAX_STRING_SIZE);
-                    throw std::runtime_error("avcodec_receive_frame failed: " + std::string(errStr));
+
+                    int ret = avcodec_receive_frame(pVideoCodecCtx, frameToReceive);
+                    if (ret == 0) {
+                        // Check if resolution is valid
+                        if (frameToReceive->width <= 0 || frameToReceive->height <= 0) {
+                            av_frame_unref(frameToReceive);
+                            continue;
+                        }
+
+                        // Check if resolution has changed or was initially unknown
+                        if (frameToReceive->width != width || frameToReceive->height != height) {
+                            width = frameToReceive->width;
+                            height = frameToReceive->height;
+                            GuiInterface::Instance().PutLog(LogLevel::Info,
+                                                            "Video resolution updated: {}x{}",
+                                                            width,
+                                                            height);
+                            if (videoConfigChangedCallback) {
+                                videoConfigChangedCallback(width, height, GetVideoFrameFormat());
+                            }
+                        }
+
+                        if (hwDecoderEnabled && !zeroCopyThisFrame) {
+                            if (dropCurrentVideoFrame) {
+                                dropCurrentVideoFrame = false;
+                                continue;
+                            }
+                            if (av_hwframe_transfer_data(pFrameVideo.get(), hwFrame.get(), 0) < 0) {
+                                GuiInterface::Instance().PutLog(LogLevel::Warn, "av_hwframe_transfer_data failed");
+                                continue;
+                            }
+                            av_frame_copy_props(pFrameVideo.get(), hwFrame.get());
+                        } else if (hwDecoderEnabled && zeroCopyThisFrame) {
+                            if (dropCurrentVideoFrame) {
+                                dropCurrentVideoFrame = false;
+                                continue;
+                            }
+                            // Zero-copy path: pFrameVideo already contains the hardware-decoded frame
+                            // No transfer needed - the CVPixelBuffer is directly accessible via data[3]
+                        }
+                        if (gotVideoFrameCallback) {
+                            gotVideoFrameCallback(pFrameVideo);
+                        }
+
+                        latestVideoFrame = pFrameVideo;
+                        continue;
+                    } else if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF) {
+                        char errStr[AV_ERROR_MAX_STRING_SIZE];
+                        av_strerror(ret, errStr, AV_ERROR_MAX_STRING_SIZE);
+                        GuiInterface::Instance().PutLog(LogLevel::Error, "avcodec_receive_frame error: {}", errStr);
+                        break;
+                    }
+                    break;
+                }
+                if (latestVideoFrame) {
+                    return latestVideoFrame;
                 }
             }
         }
