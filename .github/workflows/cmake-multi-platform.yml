@@ -67,7 +67,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt update
-          sudo apt install libavformat-dev libavcodec-dev libswresample-dev libswscale-dev libavutil-dev libusb-1.0-0-dev libsodium-dev xorg-dev libpcap-dev
+          sudo apt install libavformat-dev libavcodec-dev libswresample-dev libswscale-dev libavutil-dev libusb-1.0-0-dev libsodium-dev xorg-dev libpcap-dev libtbb-dev
 
       - name: Configure CMake (Windows)
         if: runner.os == 'Windows'
