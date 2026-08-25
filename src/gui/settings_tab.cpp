@@ -3,7 +3,7 @@
 #include <vecgui/resources/default_resource.h>
 #include <vecgui/resources/theme.h>
 
-constexpr const char* AVIATEUR_VERSION_NUM = "v0.3.2";
+constexpr const char* AVIATEUR_VERSION_NUM = "v0.3.3";
 constexpr const char* AVIATEUR_REPO_URL = "https://github.com/OpenIPC/aviateur";
 
 static void open_explorer(const std::string& dir) {
@@ -108,6 +108,9 @@ void SettingsContainer::on_ready() {
             GuiInterface::Instance().dark_mode_ = toggled;
             const auto theme = toggled ? vecgui::Theme::default_dark() : vecgui::Theme::default_light();
             context->default_resource->set_default_theme(theme);
+
+            GuiInterface::Instance().ShowTip(context->translation_server->get_translation("restart app to take effect"),
+                                             false);
         };
         dark_mode_btn->connect_signal("toggled", callback);
     }

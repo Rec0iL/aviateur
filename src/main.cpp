@@ -1,6 +1,6 @@
 ﻿#include <vecgui/app.h>
-#include <vecgui/nodes/scene_tree.h>
 #include <vecgui/resources/default_resource.h>
+#include <vecgui/scene_tree.h>
 
 #include "gui/control_panel.h"
 #include "gui/player_rect.h"
