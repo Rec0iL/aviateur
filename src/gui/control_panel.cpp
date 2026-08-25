@@ -270,7 +270,7 @@ void ControlPanel::on_ready() {
             auto callback2 = [](bool collapsed) { GuiInterface::EnableAlink(!collapsed); };
             alink_con->connect_signal("collapsed", callback2);
 
-            auto vbox_container2 = std::make_shared<vecgui::HBoxContainer>();
+            auto vbox_container2 = std::make_shared<vecgui::VBoxContainer>();
             alink_con->add_child(vbox_container2);
 
             auto hbox_container = std::make_shared<vecgui::HBoxContainer>();
@@ -297,6 +297,12 @@ void ControlPanel::on_ready() {
             };
             tx_pwr_slider_->connect_signal("value_changed", callback);
 
+            auto alink_tip = std::make_shared<vecgui::Label>();
+            alink_tip->set_text(get_context()->translation_server->get_translation("alink tip"));
+            alink_tip->set_font_size(16);
+            alink_tip->container_sizing.flag_h = vecgui::ContainerSizingFlag::Fill;
+            vbox_container2->add_child(alink_tip);
+
             // Set UI according to config
             {
                 bool enabled = GuiInterface::Instance().ini_[CONFIG_WIFI][WIFI_ALINK_ENABLED] == "true";
@@ -315,16 +321,12 @@ void ControlPanel::on_ready() {
             forward_con->set_color(vecgui::ColorU(147, 115, 165));
             vbox_blockable->add_child(forward_con);
 
-            auto on_collapsed = [](bool collapsed) {
-                // if (collapsed) {
-                //     GuiInterface::Instance().forward_port_.reset();
-                // }
-            };
-            forward_con->connect_signal("collapsed", on_collapsed);
+            auto vbox_container = std::make_shared<vecgui::VBoxContainer>();
+            forward_con->add_child(vbox_container);
 
             auto hbox_container = std::make_shared<vecgui::HBoxContainer>();
             hbox_container->set_separation(8);
-            forward_con->add_child(hbox_container);
+            vbox_container->add_child(hbox_container);
 
             auto label = std::make_shared<vecgui::Label>();
             label->set_text(get_context()->translation_server->get_translation("target port"));
@@ -337,8 +339,11 @@ void ControlPanel::on_ready() {
             forward_port_edit->set_text("");
             hbox_container->add_child(forward_port_edit);
 
-            // auto callback = [this](uint32_t) { dongle_names[1] = dongle_menu_button_b_->get_selected_item_text(); };
-            // dongle_menu_button_b_->connect_signal("item_selected", callback);
+            auto forward_tip = std::make_shared<vecgui::Label>();
+            forward_tip->set_text(get_context()->translation_server->get_translation("forward tip"));
+            forward_tip->set_font_size(16);
+            forward_tip->container_sizing.flag_h = vecgui::ContainerSizingFlag::Fill;
+            vbox_container->add_child(forward_tip);
         }
 
         {

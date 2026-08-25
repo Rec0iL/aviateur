@@ -50,9 +50,13 @@ restart app to take effect,Restart app to take effect,重启应用生效
 codec backend,Codec backend,编解码后端
 render backend,Render backend,渲染后端
 dual adapter,Dual Adapter,双网卡
-forward,Forward,转发
+forward,Forward RTP,转发 RTP
 target port,Target port,目标端口
 exit,Exit,退出
 no signal,No signal,无信号
 signal restored,Signal restored,信号恢复
 invalid device,Invalid device,无效设备
+alink tip,"Automatically balances image clarity and real-time
+smoothness based on wireless signal strength.","根据无线信号强弱，自动平衡画面清晰度与实时流畅度。"
+forward tip,"Forward the RTP video stream to the target port only,
+without decoding.","仅转发RTP视频流到目标端口，不进行解码。"
