@@ -35,6 +35,9 @@
 #define CONFIG_LOCALHOST_PORT "port"
 #define CONFIG_LOCALHOST_CODEC "codec"
 
+#define CONFIG_OSD "osd"
+#define CONFIG_OSD_THEME_PATH "theme_path"
+
 #define CONFIG_SETTINGS "settings"
 #define CONFIG_SETTINGS_LANG "language"
 #define CONFIG_SETTINGS_DARK_MODE "dark_mode"
@@ -203,6 +206,20 @@ public:
         return dir;
     }
 
+    /// Where the msposd widget theme lives. Aviateur owns this file: msposd is
+    /// pointed at it with --theme and re-reads it whenever the mtime changes, so
+    /// the OSD tab can retune widgets live.
+    ///
+    /// Deliberately not tied to the config version: an older config simply has
+    /// no key here and gets the default, rather than being wiped for it.
+    static std::string GetOsdThemePath() {
+        const auto configured = Instance().ini_[CONFIG_OSD][CONFIG_OSD_THEME_PATH];
+        if (!configured.empty()) {
+            return configured;
+        }
+        return GetAppDataDir() + "osd-theme.ini";
+    }
+
     static std::string GetCaptureDir() {
 #if defined(_WIN32)
         auto dir = std::string(getenv("USERPROFILE")) + R"(\Videos\Aviateur Captures\)";
@@ -252,6 +269,8 @@ public:
             ini[CONFIG_LOCALHOST][CONFIG_LOCALHOST_PORT] = "5600";
             ini[CONFIG_LOCALHOST][CONFIG_LOCALHOST_CODEC] = "H264";
 
+            ini[CONFIG_OSD][CONFIG_OSD_THEME_PATH] = GetAppDataDir() + "osd-theme.ini";
+
             ini[CONFIG_SETTINGS][CONFIG_SETTINGS_LANG] = "en";
 #ifdef __APPLE__
             ini[CONFIG_SETTINGS][CONFIG_SETTINGS_RENDER_BACKEND] = "metal";
@@ -274,6 +293,10 @@ public:
 
         Instance().ini_[CONFIG_WIFI][WIFI_ALINK_ENABLED] = Instance().alink_enabled_ ? "true" : "false";
         Instance().ini_[CONFIG_WIFI][WIFI_ALINK_TX_POWER] = std::to_string(Instance().alink_tx_power_);
+
+        // Written back so the path is visible and hand-editable even in a config
+        // that predates this key.
+        Instance().ini_[CONFIG_OSD][CONFIG_OSD_THEME_PATH] = GetOsdThemePath();
 
         Instance().ini_[CONFIG_SETTINGS][CONFIG_SETTINGS_LANG] = Instance().locale_;
 #ifdef __APPLE__

@@ -1,5 +1,31 @@
 # Aviateur
 
+> [!NOTE]
+> ## Fork: OSD settings for a custom ground-side OSD
+>
+> This fork adds an **OSD tab** to the control panel: a full editor for the
+> widget theme used by a companion fork of
+> [msposd](https://github.com/Rec0iL/msposd), which draws a themed widget OSD
+> and a moving map over the video on the ground side.
+>
+> Mode, global opacity and scale, per-element enable/opacity/scale, the map
+> (imagery, orientation, zoom range, look-ahead), colours, panel geometry,
+> battery thresholds and the artificial horizon. Edits are written to
+> `~/.aviateur/osd-theme.ini`, which msposd re-reads whenever the mtime changes
+> — so a change lands on the video without restarting anything. Point msposd at
+> the same file with `msposd --theme ~/.aviateur/osd-theme.ini`.
+>
+> Nothing else in Aviateur is changed: no video, Wi-Fi or link behaviour is
+> touched.
+>
+> **Status: heavily work in progress.** Two of us are flying and testing it. It
+> breaks, the theme format still changes, and nothing here is stable.
+>
+> **No upstream pull requests are planned.** This fork exists to try ideas, not
+> to land them in the OpenIPC repositories. Issues and PRs belong here, not
+> there.
+
+
 <p align="center">
   <a href="https://github.com/OpenIPC/aviateur">
     <img src="assets/logo.svg" width="120" alt="Aviateur logo">

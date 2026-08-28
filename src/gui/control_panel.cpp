@@ -2,6 +2,7 @@
 
 #include <vecgui/resources/default_resource.h>
 
+#include "osd_tab.h"
 #include "settings_tab.h"
 
 void ControlPanel::update_dongle_list(const std::shared_ptr<vecgui::MenuButton> &menu_button,
@@ -526,6 +527,14 @@ void ControlPanel::on_ready() {
             play_port_button_->connect_signal("triggered", callback1);
             vbox->add_child(play_port_button_);
         }
+    }
+
+    // OSD tab. Sits before Settings so the F5 shortcut, which keys off tab
+    // indices 0 and 1, keeps working.
+    {
+        auto osd_container = std::make_shared<OsdContainer>();
+        osd_container->name = "OSD";
+        tab_container_->add_child(osd_container);
     }
 
     // Settings tab
