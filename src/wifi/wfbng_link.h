@@ -106,6 +106,11 @@ protected:
     std::unique_ptr<AggregatorX> udp_aggregator;
 
     std::shared_ptr<SignalQualityCalculator> signal_quality_calculator;
+
+    // What start() tuned to, kept for the link widget: the receiver never sees
+    // this again once it is running, but the widget wants to show it.
+    uint8_t tuned_channel_ = 0;
+    int tuned_bandwidth_mhz_ = 0;
     std::array<int, ANTENNA_COUNT> link_score_ = {}; // Percentage
     int packets_lost_ = 0;                           // Number over the last second
 

@@ -31,16 +31,9 @@
 extern "C" {
 #include "osd/widgets/osd_link.h"
 }
-struct OsdLinkStats {
-    int rssi_dbm[2] = {0, 0};
-    int snr_db[2] = {0, 0};
-    bool antenna_valid[2] = {false, false};
-    float quality_pct = -1.0f, loss_pct = -1.0f, bitrate_mbps = -1.0f;
-};
-bool osd_write_link_stats(const std::string &path, const OsdLinkStats &stats);
-std::string osd_link_stats_path();
-void osd_link_note_bitrate(unsigned long long bits_per_second);
-float osd_link_bitrate_mbps();
+// The real header, not a local copy of the struct: a second field list is one
+// more place for this to drift out of step with the writer.
+#include "osd_link_writer.h"
 
 int fails = 0;
 static void ck(const char *n, bool ok) { printf("  %-46s %s\n", n, ok ? "PASS" : "FAIL"); if (!ok) fails++; }
@@ -48,6 +41,7 @@ static void ck(const char *n, bool ok) { printf("  %-46s %s\n", n, ok ? "PASS" :
 // PixelPilot's writer, which resolves the same default path.
 extern "C" {
 const char *pp_osd_link_stats_path(void);
+int pp_osd_link_channel_from_mhz(int mhz);
 }
 
 int main() {
@@ -92,6 +86,36 @@ int main() {
     memset(&r, 0, sizeof(r));
     osd_link_stats_load(p.c_str(), &r, 1000);
     ck("bitrate survives the round trip", r.bitrate_mbps > 12.3f && r.bitrate_mbps < 12.5f);
+
+    // Aviateur is told a channel and derives megahertz; PixelPilot is told
+    // megahertz and derives the channel. The two conversions have to be
+    // inverses or the same radio would be captioned differently on the two
+    // ground stations.
+    const int channels[] = {1, 6, 13, 36, 44, 149, 161, 165};
+    bool inverse_ok = true;
+    for (int c : channels) {
+        const int mhz = osd_link_mhz_from_channel(c);
+        if (mhz == 0 || pp_osd_link_channel_from_mhz(mhz) != c) {
+            printf("    channel %d -> %d MHz -> %d\n", c, mhz, pp_osd_link_channel_from_mhz(mhz));
+            inverse_ok = false;
+        }
+    }
+    ck("channel and frequency convert both ways", inverse_ok);
+    ck("channel 14 is the odd one out", osd_link_mhz_from_channel(14) == 2484 &&
+        pp_osd_link_channel_from_mhz(2484) == 14);
+    ck("nonsense converts to nothing", osd_link_mhz_from_channel(0) == 0 &&
+        pp_osd_link_channel_from_mhz(1234) == 0);
+
+    // And the pair survives the file.
+    OsdLinkStats w4 = w;
+    w4.channel = 149;
+    w4.freq_mhz = osd_link_mhz_from_channel(149);
+    w4.bandwidth_mhz = 20;
+    osd_write_link_stats(p, w4);
+    memset(&r, 0, sizeof(r));
+    osd_link_stats_load(p.c_str(), &r, 1000);
+    ck("tuning survives the round trip",
+       r.channel == 149 && r.freq_mhz == 5745 && r.bandwidth_mhz == 20);
 
     // A silent antenna must not be published at all.
     OsdLinkStats w2;

@@ -21,6 +21,12 @@ struct OsdLinkStats {
     int snr_db[2] = {0, 0};
     bool antenna_valid[2] = {false, false};
 
+    // What the receiver is tuned to. Zero means unknown, which the widget shows
+    // as nothing rather than as channel zero.
+    int channel = 0;
+    int freq_mhz = 0;
+    int bandwidth_mhz = 0;
+
     // Negative means "not measured", which the widget shows differently from a
     // measured zero - a link quality of 0 is a dead link, an absent one is a
     // ground station that does not count packets.
@@ -40,6 +46,11 @@ struct OsdLinkStats {
 /// two processes share, not configuration, and msposd has no business knowing
 /// where Aviateur keeps its settings.
 std::string osd_link_stats_path();
+
+/// The centre frequency of an 802.11 channel, or 0 for one we do not know.
+/// Aviateur is told a channel number; the widget shows megahertz beside it
+/// because pilots read both.
+int osd_link_mhz_from_channel(int channel);
 
 /// Notes the decoder's current bitrate, in bits per second, for the next write.
 ///

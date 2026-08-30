@@ -26,6 +26,19 @@ std::string osd_link_stats_path() {
     return "/tmp/msposd-link.ini";
 }
 
+int osd_link_mhz_from_channel(int channel) {
+    if (channel == 14) {
+        return 2484; // the one channel that does not follow the 5 MHz spacing
+    }
+    if (channel >= 1 && channel <= 13) {
+        return 2407 + channel * 5;
+    }
+    if (channel >= 7 && channel <= 185) {
+        return 5000 + channel * 5;
+    }
+    return 0;
+}
+
 bool osd_write_link_stats(const std::string &path, const OsdLinkStats &stats) {
     if (path.empty()) {
         return false;
@@ -66,6 +79,15 @@ bool osd_write_link_stats(const std::string &path, const OsdLinkStats &stats) {
     }
     if (stats.bitrate_mbps >= 0.0f) {
         fprintf(f, "bitrate_mbps = %.1f\n", stats.bitrate_mbps);
+    }
+    if (stats.channel > 0) {
+        fprintf(f, "channel = %d\n", stats.channel);
+    }
+    if (stats.freq_mhz > 0) {
+        fprintf(f, "freq_mhz = %d\n", stats.freq_mhz);
+    }
+    if (stats.bandwidth_mhz > 0) {
+        fprintf(f, "bandwidth_mhz = %d\n", stats.bandwidth_mhz);
     }
 
     fclose(f);

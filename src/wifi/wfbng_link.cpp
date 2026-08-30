@@ -18,6 +18,7 @@
 #include "logger.h"
 #include "rtp.h"
 #include "rx_frame.h"
+#include "../../3rd/devourer/src/ToneMask.h"
 #include "../gui/osd_link_writer.h"
 #include "signal_quality.h"
 
@@ -267,6 +268,8 @@ std::vector<DeviceId> WfbngLink::get_device_list() {
 }
 
 bool WfbngLink::start(const DeviceId &deviceId, uint8_t channel, int channelWidthMode, const std::string &kPath) {
+    tuned_channel_ = channel;
+    tuned_bandwidth_mhz_ = (int)devourer::tonemask::bw_mhz_from((ChannelWidth_t)channelWidthMode);
     GuiInterface::Instance().wifiFrameCount_ = 0;
     GuiInterface::Instance().wfbngFrameCount_ = 0;
     GuiInterface::Instance().rtpPktCount_ = 0;
@@ -782,6 +785,9 @@ void WfbngLink::handle_80211_frame(const Packet &packet) {
                 ls.quality_pct = loss > 100.0f ? 0.0f : 100.0f - loss;
             }
             ls.bitrate_mbps = osd_link_bitrate_mbps();
+            ls.channel = tuned_channel_;
+            ls.freq_mhz = osd_link_mhz_from_channel(tuned_channel_);
+            ls.bandwidth_mhz = tuned_bandwidth_mhz_;
             osd_write_link_stats(osd_link_stats_path(), ls);
         }
     }
