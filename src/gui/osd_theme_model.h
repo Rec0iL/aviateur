@@ -187,6 +187,9 @@ struct OsdTheme {
     float link_x = 2.0f;
     float link_y = 34.0f;
     float link_scale = 1.0f;
+    // Per-aerial readings. Off leaves the headline - source, channel and the
+    // link quality bar - which is what most pilots watch in flight.
+    bool link_antennas = true;
     float link_opacity = 1.0f;
     // Where Aviateur publishes the numbers. Filled in when the theme is seeded,
     // so the widget works without the user having to find the path.

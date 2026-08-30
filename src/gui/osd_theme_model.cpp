@@ -342,6 +342,7 @@ bool OsdTheme::load(const std::string& path) {
     get_float(ini, "link", "x", &link_x);
     get_float(ini, "link", "y", &link_y);
     get_float(ini, "link", "scale", &link_scale);
+    get_bool(ini, "link", "antennas", &link_antennas);
     get_float(ini, "link", "opacity", &link_opacity);
     get_string(ini, "link", "source", &link_source);
     // Early builds seeded this with an absolute path inside the app data
@@ -461,6 +462,7 @@ bool OsdTheme::save(const std::string& path) const {
     ini["link"]["x"] = fnum(link_x);
     ini["link"]["y"] = fnum(link_y);
     ini["link"]["scale"] = fnum(link_scale);
+    ini["link"]["antennas"] = on_off(link_antennas);
     ini["link"]["opacity"] = fnum(link_opacity);
     ini["link"]["source"] = link_source;
     ini["link"]["hold_ms"] = fnum(link_hold_ms);
@@ -636,6 +638,9 @@ bool OsdTheme::write_seed(const std::string& path) const {
       << "x = " << fnum(link_x) << "\n"
       << "y = " << fnum(link_y) << "\n"
       << "scale = " << fnum(link_scale) << "\n"
+         "; Per-aerial readings. Off leaves the headline - who is reporting, which\n"
+         "; channel, and the link quality bar - which is what most pilots watch in flight.\n"
+      << "antennas = " << on_off(link_antennas) << "\n"
       << "opacity = " << fnum(link_opacity) << "\n"
          "; Where Aviateur publishes the numbers. Empty disables the widget.\n"
       << "source = " << link_source << "\n"

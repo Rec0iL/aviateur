@@ -432,6 +432,17 @@ void OsdContainer::on_ready() {
                  "Vertical stacks the antennas, for a left or right edge. Horizontal puts "
                  "them side by side, for the top or bottom.");
 
+        add_check(
+            box,
+            "Show each antenna",
+            [this] { return theme_.link_antennas; },
+            [this](bool v) { theme_.link_antennas = v; });
+
+        add_note(box,
+                 "Off leaves the headline - who is reporting, which channel, and the link "
+                 "quality bar. A six-aerial station is a lot of panel for something you "
+                 "study on the ground rather than in the air.");
+
         add_slider(
             box,
             "Position X",
