@@ -88,6 +88,11 @@ struct OsdTheme {
 
     // [theme]
     std::string name = "Tactical";
+    // The panel outline: "notched" steps the top-left corner and cuts the
+    // bottom-right one, "square" does neither. A shape rather than a number,
+    // because the notch is a third of the top edge with the value sitting in
+    // the raised part beside it - there is nothing to dial to zero.
+    std::string panel_shape = "notched";
     std::string font_path = "fonts/UbuntuMono-Regular.ttf";
     float panel_min_width = 250.0f;
     float panel_height = 104.0f;

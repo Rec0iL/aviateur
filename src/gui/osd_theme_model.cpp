@@ -279,6 +279,8 @@ bool OsdTheme::load(const std::string& path) {
     get_bool(ini, "osd", "glyphs", &glyphs);
 
     get_string(ini, "theme", "name", &name);
+    get_string(ini, "theme", "panel_shape", &panel_shape);
+    panel_shape = lower(panel_shape);
     get_string(ini, "theme", "font", &font_path);
     get_float(ini, "theme", "panel_min_width", &panel_min_width);
     get_float(ini, "theme", "panel_height", &panel_height);
@@ -393,6 +395,7 @@ bool OsdTheme::save(const std::string& path) const {
     ini["osd"]["glyphs"] = on_off(glyphs);
 
     ini["theme"]["name"] = name;
+    ini["theme"]["panel_shape"] = panel_shape;
     ini["theme"]["font"] = font_path;
     ini["theme"]["panel_min_width"] = fnum(panel_min_width);
     ini["theme"]["panel_height"] = fnum(panel_height);
@@ -523,6 +526,9 @@ bool OsdTheme::write_seed(const std::string& path) const {
 
     f << "[theme]\n"
       << "name = " << name << "\n"
+         "; notched - the top-left corner steps down and the bottom-right is cut away\n"
+         "; square  - plain rectangles, no diagonals anywhere\n"
+      << "panel_shape = " << panel_shape << "\n"
       << "font = " << font_path << "\n"
       << "panel_min_width = " << fnum(panel_min_width) << "\n"
       << "panel_height = " << fnum(panel_height) << "\n"

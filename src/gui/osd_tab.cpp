@@ -392,6 +392,19 @@ void OsdContainer::on_ready() {
                  "Element hold must exceed the flight controller's blink off-period, or a "
                  "critical value vanishes exactly when it matters.");
 
+        static const std::vector<std::string> kPanelShapes = {"notched", "square"};
+        add_choice(
+            box,
+            "Panel shape",
+            kPanelShapes,
+            [this] { return theme_.panel_shape == "square" ? 1 : 0; },
+            [this](int i) { theme_.panel_shape = kPanelShapes[i]; });
+
+        add_note(box,
+                 "Notched steps the top-left corner down and cuts the bottom-right one away. "
+                 "Square is plain rectangles, with no diagonal anywhere - including the "
+                 "corner marks and the lean on the bar hatching.");
+
         add_string(
             box,
             "Theme name",
