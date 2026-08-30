@@ -177,6 +177,22 @@ struct OsdTheme {
     bool heading_outline = true;        // outline the ticks and markers, not just the text
     float heading_outline_width = 2.0f;
 
+    // [link]. Ground-side link statistics - the one widget the flight
+    // controller knows nothing about, so unlike every other element its
+    // position is set here rather than inherited from the FC's own layout.
+    bool link_enabled = true;
+    std::string link_style = "vertical"; // vertical | horizontal
+    // Top-left corner as a percentage of the screen, so a layout survives a
+    // move between a 720p and a 1080p ground station.
+    float link_x = 2.0f;
+    float link_y = 34.0f;
+    float link_scale = 1.0f;
+    float link_opacity = 1.0f;
+    // Where Aviateur publishes the numbers. Filled in when the theme is seeded,
+    // so the widget works without the user having to find the path.
+    std::string link_source;
+    float link_hold_ms = 3000.0f;
+
     OsdTheme();
 
     /// Merges `path` over whatever is already here, the way msposd does: a key

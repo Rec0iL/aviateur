@@ -1,5 +1,7 @@
 #include "osd_theme_model.h"
 
+#include "osd_link_writer.h"
+
 #include <mini/ini.h>
 
 #include <algorithm>
@@ -252,6 +254,10 @@ std::string osd_format_color(const uint32_t argb) {
 }
 
 OsdTheme::OsdTheme() {
+    // Point the link widget at where Aviateur publishes its statistics, so it
+    // works out of the box rather than needing the user to find the path. A
+    // theme file that says otherwise still wins - this is only the default.
+    link_source = osd_link_stats_path();
     elem_enabled.fill(true);
     elem_opacity.fill(1.0f);
     elem_scale.fill(1.0f);
@@ -330,6 +336,16 @@ bool OsdTheme::load(const std::string& path) {
     get_float(ini, "heading", "lens", &heading_lens);
     get_bool(ini, "heading", "outline", &heading_outline);
     get_float(ini, "heading", "outline_width", &heading_outline_width);
+
+    get_bool(ini, "link", "enabled", &link_enabled);
+    get_string(ini, "link", "style", &link_style);
+    link_style = lower(link_style);
+    get_float(ini, "link", "x", &link_x);
+    get_float(ini, "link", "y", &link_y);
+    get_float(ini, "link", "scale", &link_scale);
+    get_float(ini, "link", "opacity", &link_opacity);
+    get_string(ini, "link", "source", &link_source);
+    get_float(ini, "link", "hold_ms", &link_hold_ms);
 
     get_bool(ini, "map", "enabled", &map_enabled);
     get_string(ini, "map", "style", &map_style);
@@ -432,6 +448,15 @@ bool OsdTheme::save(const std::string& path) const {
     ini["heading"]["lens"] = fnum(heading_lens);
     ini["heading"]["outline"] = on_off(heading_outline);
     ini["heading"]["outline_width"] = fnum(heading_outline_width);
+
+    ini["link"]["enabled"] = on_off(link_enabled);
+    ini["link"]["style"] = link_style;
+    ini["link"]["x"] = fnum(link_x);
+    ini["link"]["y"] = fnum(link_y);
+    ini["link"]["scale"] = fnum(link_scale);
+    ini["link"]["opacity"] = fnum(link_opacity);
+    ini["link"]["source"] = link_source;
+    ini["link"]["hold_ms"] = fnum(link_hold_ms);
 
     ini["map"]["enabled"] = on_off(map_enabled);
     ini["map"]["style"] = map_style;
@@ -590,6 +615,25 @@ bool OsdTheme::write_seed(const std::string& path) const {
          "; thin lines over live video, and thin lines over snow or sky disappear.\n"
       << "outline = " << on_off(heading_outline) << "\n"
       << "outline_width = " << fnum(heading_outline_width) << "\n\n";
+
+    f << "[link]\n"
+         "; Ground-side link statistics - wfb-ng or APFPV. The only widget the flight\n"
+         "; controller knows nothing about, so its position is set here rather than being\n"
+         "; inherited from wherever you placed something in Betaflight or INAV.\n"
+      << "enabled = " << on_off(link_enabled) << "\n"
+         "; vertical   - antennas stacked, for the left or right edge\n"
+         "; horizontal - antennas side by side, for the top or bottom\n"
+      << "style = " << link_style << "\n"
+         "; Top-left corner as a percentage of the screen, so a layout carries over\n"
+         "; between a 720p and a 1080p ground station.\n"
+      << "x = " << fnum(link_x) << "\n"
+      << "y = " << fnum(link_y) << "\n"
+      << "scale = " << fnum(link_scale) << "\n"
+      << "opacity = " << fnum(link_opacity) << "\n"
+         "; Where Aviateur publishes the numbers. Empty disables the widget.\n"
+      << "source = " << link_source << "\n"
+         "; How long the last numbers stay up once the writer stops, ms.\n"
+      << "hold_ms = " << fnum(link_hold_ms) << "\n\n";
 
     f << "[map]\n"
       << "enabled = " << on_off(map_enabled) << "\n"

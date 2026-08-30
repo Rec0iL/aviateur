@@ -405,6 +405,86 @@ void OsdContainer::on_ready() {
             [this](const std::string& v) { theme_.font_path = v; });
     }
 
+    // --- link statistics -----------------------------------------------------
+    {
+        auto box = add_section(root, "Link stats", true);
+
+        add_note(box,
+                 "wfb-ng and APFPV live on this side of the link - the flight controller has "
+                 "never heard of them - so unlike every other widget there is no position on "
+                 "the OSD grid to inherit. Place it here instead.");
+
+        add_check(
+            box,
+            "Enabled",
+            [this] { return theme_.link_enabled; },
+            [this](bool v) { theme_.link_enabled = v; });
+
+        static const std::vector<std::string> kLinkStyles = {"vertical", "horizontal"};
+        add_choice(
+            box,
+            "Layout",
+            kLinkStyles,
+            [this] { return theme_.link_style == "horizontal" ? 1 : 0; },
+            [this](int i) { theme_.link_style = kLinkStyles[i]; });
+
+        add_note(box,
+                 "Vertical stacks the antennas, for a left or right edge. Horizontal puts "
+                 "them side by side, for the top or bottom.");
+
+        add_slider(
+            box,
+            "Position X",
+            0.0f,
+            100.0f,
+            false,
+            [this] { return theme_.link_x; },
+            [this](float v) { theme_.link_x = v; });
+
+        add_slider(
+            box,
+            "Position Y",
+            0.0f,
+            100.0f,
+            false,
+            [this] { return theme_.link_y; },
+            [this](float v) { theme_.link_y = v; });
+
+        add_note(box,
+                 "The top-left corner, as a percentage of the screen - so a layout carries "
+                 "over between a 720p and a 1080p ground station. A value near 100 pulls the "
+                 "widget back on screen rather than off the edge.");
+
+        add_slider(
+            box,
+            "Size",
+            0.3f,
+            4.0f,
+            false,
+            [this] { return theme_.link_scale; },
+            [this](float v) { theme_.link_scale = v; });
+
+        add_slider(
+            box,
+            "Opacity",
+            0.0f,
+            1.0f,
+            false,
+            [this] { return theme_.link_opacity; },
+            [this](float v) { theme_.link_opacity = v; });
+
+        add_string(
+            box,
+            "Stats file",
+            [this] { return theme_.link_source; },
+            [this](const std::string& v) { theme_.link_source = v; });
+
+        add_note(box,
+                 "Aviateur writes this file about once a second and msposd polls it. It is "
+                 "filled in for you; clearing it turns the widget off as surely as the "
+                 "switch above.");
+    }
+
     // --- compass ------------------------------------------------------------
     {
         auto box = add_section(root, "Compass", true);

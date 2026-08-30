@@ -18,6 +18,7 @@
 #include "logger.h"
 #include "rtp.h"
 #include "rx_frame.h"
+#include "../gui/osd_link_writer.h"
 #include "signal_quality.h"
 
 #ifdef __linux__
@@ -759,6 +760,29 @@ void WfbngLink::handle_80211_frame(const Packet &packet) {
         link_score_[0] = quality.link_score[0];
         link_score_[1] = quality.link_score[1];
         packets_lost_ = quality.lost_last_second;
+
+        // Hand the same numbers to msposd's link widget. It knows nothing about
+        // wfb-ng - it only sees MSP coming down from the air unit - so this file
+        // is the whole connection. Cheap enough to do from here: one small write
+        // per statistics block, which is about once a second.
+        {
+            OsdLinkStats ls;
+            for (int i = 0; i < 2; i++) {
+                ls.rssi_dbm[i] = quality.rssi[i];
+                ls.snr_db[i] = quality.snr[i];
+                // A silent antenna reports 0 dBm, which is not a reading - it is
+                // the absence of one, and drawing it as a full-strength signal
+                // would be the worst possible way to show a dead aerial.
+                ls.antenna_valid[i] = quality.rssi[i] != 0;
+            }
+            const int total = quality.total_last_second;
+            if (total > 0) {
+                const float loss = 100.0f * (float)quality.lost_last_second / (float)total;
+                ls.loss_pct = loss;
+                ls.quality_pct = loss > 100.0f ? 0.0f : 100.0f - loss;
+            }
+            osd_write_link_stats(osd_link_stats_path(), ls);
+        }
     }
     // MAVLink frame
     else if (frame.MatchesChannelID(mavlink_channel_id_be8)) {
