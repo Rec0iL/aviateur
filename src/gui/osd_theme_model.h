@@ -36,6 +36,27 @@ enum OsdElement {
     // MSP_ATTITUDE - so the opacity and scale here move the compass, and
     // turning it off leaves the flight controller's own bar showing.
     OSD_EL_HEADING_BAR,
+    // Betaflight-only so far. INAV marks most of these too, but its symbol
+    // table is not confirmed here and a wrong code would turn ordinary glyphs
+    // into widgets, so they are recognised on Betaflight alone for now.
+    OSD_EL_SPEED,
+    OSD_EL_VARIO,
+    OSD_EL_HOME_DISTANCE,
+    OSD_EL_TOTAL_DISTANCE,
+    OSD_EL_TEMPERATURE,
+    OSD_EL_LINK_QUALITY,
+    OSD_EL_RSSI_DBM,
+    OSD_EL_SNR,
+    OSD_EL_HOME_ARROW,
+    OSD_EL_HEADING,
+    // Fields Betaflight draws with no symbol at all, found by the literal text
+    // around the number.
+    OSD_EL_GFORCE,
+    OSD_EL_POWER,
+    OSD_EL_WATT_HOURS,
+    OSD_EL_RANGEFINDER,
+    OSD_EL_EFFICIENCY,
+    OSD_EL_TX_POWER,
     OSD_EL_COUNT,
 };
 
