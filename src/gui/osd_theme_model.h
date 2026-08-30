@@ -49,8 +49,8 @@ enum OsdElement {
     OSD_EL_SNR,
     OSD_EL_HOME_ARROW,
     OSD_EL_HEADING,
-    // Fields Betaflight draws with no symbol at all, found by the literal text
-    // around the number.
+    // Betaflight draws these with no symbol at all and they are found by the
+    // literal text around the number; INAV gives most of them a symbol.
     OSD_EL_GFORCE,
     OSD_EL_POWER,
     OSD_EL_WATT_HOURS,
