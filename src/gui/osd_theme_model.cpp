@@ -632,6 +632,8 @@ bool OsdTheme::write_seed(const std::string& path) const {
       << "enabled = " << on_off(link_enabled) << "\n"
          "; vertical   - antennas stacked, for the left or right edge\n"
          "; horizontal - antennas side by side, for the top or bottom\n"
+         "; ultrawide  - a shallow strip: channel, loss and throughput share the top line,\n"
+         ";              leaving the full width below for the link quality bar\n"
       << "style = " << link_style << "\n"
          "; Top-left corner as a percentage of the screen, so a layout carries over\n"
          "; between a 720p and a 1080p ground station.\n"

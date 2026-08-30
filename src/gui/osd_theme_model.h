@@ -181,7 +181,7 @@ struct OsdTheme {
     // controller knows nothing about, so unlike every other element its
     // position is set here rather than inherited from the FC's own layout.
     bool link_enabled = true;
-    std::string link_style = "vertical"; // vertical | horizontal
+    std::string link_style = "vertical"; // vertical | horizontal | ultrawide
     // Top-left corner as a percentage of the screen, so a layout survives a
     // move between a 720p and a 1080p ground station.
     float link_x = 2.0f;

@@ -420,17 +420,27 @@ void OsdContainer::on_ready() {
             [this] { return theme_.link_enabled; },
             [this](bool v) { theme_.link_enabled = v; });
 
-        static const std::vector<std::string> kLinkStyles = {"vertical", "horizontal"};
+        static const std::vector<std::string> kLinkStyles = {"vertical", "horizontal",
+                                                             "ultrawide"};
         add_choice(
             box,
             "Layout",
             kLinkStyles,
-            [this] { return theme_.link_style == "horizontal" ? 1 : 0; },
+            [this] {
+                for (size_t i = 0; i < kLinkStyles.size(); i++) {
+                    if (kLinkStyles[i] == theme_.link_style) {
+                        return static_cast<int>(i);
+                    }
+                }
+                return 0;
+            },
             [this](int i) { theme_.link_style = kLinkStyles[i]; });
 
         add_note(box,
                  "Vertical stacks the antennas, for a left or right edge. Horizontal puts "
-                 "them side by side, for the top or bottom.");
+                 "them side by side, for the top or bottom. Ultrawide is a shallow strip for "
+                 "the very top or bottom: the channel, packet loss and throughput share the "
+                 "first line, leaving the whole width below for the quality bar.");
 
         add_check(
             box,
