@@ -24,6 +24,7 @@ const char* const kElementKeys[OSD_EL_COUNT] = {
     "flight_time",
     "flight_mode",
     "warning",
+    "heading_bar",
 };
 
 const char* const kElementLabels[OSD_EL_COUNT] = {
@@ -39,6 +40,7 @@ const char* const kElementLabels[OSD_EL_COUNT] = {
     "Flight time",
     "Flight mode",
     "Messages",
+    "Compass",
 };
 
 /// msposd strips a trailing `; comment` from every value; mINI does not. Reading
@@ -237,6 +239,7 @@ bool OsdTheme::load(const std::string& path) {
     fancy = lower(mode) != "classic";
     get_float(ini, "osd", "opacity", &global_opacity);
     get_float(ini, "osd", "scale", &global_scale);
+    get_bool(ini, "osd", "glyphs", &glyphs);
 
     get_string(ini, "theme", "name", &name);
     get_string(ini, "theme", "font", &font_path);
@@ -254,6 +257,9 @@ bool OsdTheme::load(const std::string& path) {
     get_float(ini, "theme", "hatch_duty", &hatch_duty);
     get_float(ini, "theme", "hatch_slant", &hatch_slant);
     get_float(ini, "theme", "element_hold_ms", &element_hold_ms);
+    get_bool(ini, "theme", "text_outline", &text_outline);
+    get_color(ini, "theme", "text_outline_color", &text_outline_color);
+    get_int(ini, "theme", "text_outline_width", &text_outline_width);
 
     for (const auto& f : color_fields()) {
         get_color(ini, "colors", f.key, &(this->*f.member));
@@ -282,6 +288,16 @@ bool OsdTheme::load(const std::string& path) {
     get_float(ini, "ahi", "level_max", &ahi_level_max);
     get_float(ini, "ahi", "moderate_max", &ahi_moderate_max);
     get_int(ini, "ahi", "steep_thickness", &ahi_steep_thickness);
+
+    get_string(ini, "heading", "style", &heading_style);
+    heading_style = lower(heading_style);
+    get_float(ini, "heading", "size", &heading_size);
+    get_float(ini, "heading", "span", &heading_span);
+    get_bool(ini, "heading", "show_track", &heading_show_track);
+    get_bool(ini, "heading", "flip", &heading_flip);
+    get_float(ini, "heading", "lens", &heading_lens);
+    get_bool(ini, "heading", "outline", &heading_outline);
+    get_float(ini, "heading", "outline_width", &heading_outline_width);
 
     get_bool(ini, "map", "enabled", &map_enabled);
     get_string(ini, "map", "style", &map_style);
@@ -318,6 +334,7 @@ bool OsdTheme::save(const std::string& path) const {
     ini["osd"]["mode"] = fancy ? "fancy" : "classic";
     ini["osd"]["opacity"] = fnum(global_opacity);
     ini["osd"]["scale"] = fnum(global_scale);
+    ini["osd"]["glyphs"] = on_off(glyphs);
 
     ini["theme"]["name"] = name;
     ini["theme"]["font"] = font_path;
@@ -335,6 +352,9 @@ bool OsdTheme::save(const std::string& path) const {
     ini["theme"]["hatch_duty"] = fnum(hatch_duty);
     ini["theme"]["hatch_slant"] = fnum(hatch_slant);
     ini["theme"]["element_hold_ms"] = fnum(element_hold_ms);
+    ini["theme"]["text_outline"] = on_off(text_outline);
+    ini["theme"]["text_outline_color"] = osd_format_color(text_outline_color);
+    ini["theme"]["text_outline_width"] = std::to_string(text_outline_width);
 
     for (const auto& f : color_fields()) {
         ini["colors"][f.key] = osd_format_color(this->*f.member);
@@ -371,6 +391,15 @@ bool OsdTheme::save(const std::string& path) const {
     ini["ahi"]["level_max"] = fnum(ahi_level_max);
     ini["ahi"]["moderate_max"] = fnum(ahi_moderate_max);
     ini["ahi"]["steep_thickness"] = std::to_string(ahi_steep_thickness);
+
+    ini["heading"]["style"] = heading_style;
+    ini["heading"]["size"] = fnum(heading_size);
+    ini["heading"]["span"] = fnum(heading_span);
+    ini["heading"]["show_track"] = on_off(heading_show_track);
+    ini["heading"]["flip"] = on_off(heading_flip);
+    ini["heading"]["lens"] = fnum(heading_lens);
+    ini["heading"]["outline"] = on_off(heading_outline);
+    ini["heading"]["outline_width"] = fnum(heading_outline_width);
 
     ini["map"]["enabled"] = on_off(map_enabled);
     ini["map"]["style"] = map_style;
@@ -419,7 +448,12 @@ bool OsdTheme::write_seed(const std::string& path) const {
          "; fancy   = graphical widgets\n"
       << "mode = " << (fancy ? "fancy" : "classic") << "\n"
       << "opacity = " << fnum(global_opacity) << "\n"
-      << "scale = " << fnum(global_scale) << "\n\n";
+      << "scale = " << fnum(global_scale) << "\n"
+         "; The widgets replace the flight controller's own text, so its glyph layer is\n"
+         "; normally not drawn at all. Turning it back on shows OSD content the recogniser\n"
+         "; does not know about - a tuning page, say - at the cost of the recognised\n"
+         "; fields flickering through underneath.\n"
+      << "glyphs = " << on_off(glyphs) << "\n\n";
 
     f << "[theme]\n"
       << "name = " << name << "\n"
@@ -443,7 +477,13 @@ bool OsdTheme::write_seed(const std::string& path) const {
          "; How long a vanished element keeps being drawn, ms. Flight controllers blink\n"
          "; critical values by alternating them with blank, so this must exceed the blink\n"
          "; off-period or the widget disappears exactly when the reading matters most.\n"
-      << "element_hold_ms = " << fnum(element_hold_ms) << "\n\n";
+      << "element_hold_ms = " << fnum(element_hold_ms) << "\n"
+         "; Outline behind every string, and the colour every outline on screen uses -\n"
+         "; the compass picks this colour up for its ticks and markers too. Small light\n"
+         "; text over a bright frame is unreadable without it.\n"
+      << "text_outline = " << on_off(text_outline) << "\n"
+      << "text_outline_color = " << osd_format_color(text_outline_color) << "\n"
+      << "text_outline_width = " << text_outline_width << "\n\n";
 
     f << "[colors]\n"
          "; RRGGBB or AARRGGBB\n";
@@ -496,13 +536,37 @@ bool OsdTheme::write_seed(const std::string& path) const {
          "; the centre bar thickens when steep\n"
       << "steep_thickness = " << ahi_steep_thickness << "\n\n";
 
+    f << "[heading]\n"
+         "; Where the compass goes comes from the flight controller - wherever the\n"
+         "; compass bar is placed - and the heading itself from MSP_ATTITUDE, so none of\n"
+         "; this depends on reading the bar's glyphs. Both firmwares fix the bar's width,\n"
+         "; which is why the size is set here instead.\n"
+         "; band | rose | ring | navball | numeric\n"
+      << "style = " << heading_style << "\n"
+         "; Band/ring width, or rose/navball diameter, in pixels.\n"
+      << "size = " << fnum(heading_size) << "\n"
+         "; Band only: degrees visible end to end, 45..120. Narrow reads fast in a turn,\n"
+         "; wide gives more context.\n"
+      << "span = " << fnum(heading_span) << "\n"
+         "; A second marker at the ground course. On a wing in wind this is where you are\n"
+         "; actually going, which is not where the nose points.\n"
+      << "show_track = " << on_off(heading_show_track) << "\n"
+         "; Ring only: which way the arc curves, and how hard the centre is magnified.\n"
+      << "flip = " << on_off(heading_flip) << "\n"
+      << "lens = " << fnum(heading_lens) << "\n"
+         "; Outline behind the ticks and markers as well as the numbers. A compass is\n"
+         "; thin lines over live video, and thin lines over snow or sky disappear.\n"
+      << "outline = " << on_off(heading_outline) << "\n"
+      << "outline_width = " << fnum(heading_outline_width) << "\n\n";
+
     f << "[map]\n"
       << "enabled = " << on_off(map_enabled) << "\n"
          "; roads | satellite | hybrid\n"
       << "style = " << map_style << "\n"
-         "; north = north stays up, track = the map turns so your ground track is up.\n"
-         "; Track-up is easier to fly to and harder to orient by, so a compass needle is\n"
-         "; drawn in the corner whenever it is on.\n"
+         "; north = north stays up; track = the map turns so your ground track is up;\n"
+         "; heading = it turns with the nose, which is what agrees with a nose-mounted\n"
+         "; camera - in wind the two differ. Either turning mode is easier to fly to and\n"
+         "; harder to orient by, so a compass needle is drawn whenever one is on.\n"
       << "orientation = " << map_orientation << "\n"
          "; 1..19, used when auto_zoom is off\n"
       << "zoom = " << map_zoom << "\n"

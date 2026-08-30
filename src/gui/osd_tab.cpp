@@ -105,6 +105,39 @@ void OsdContainer::on_ready() {
             [this] { return theme_.global_scale; },
             [this](float v) { theme_.global_scale = v; });
 
+        add_check(
+            box,
+            "Show raw FC text underneath",
+            [this] { return theme_.glyphs; },
+            [this](bool v) { theme_.glyphs = v; });
+
+        add_note(box,
+                 "The widgets replace the flight controller's own text, so its glyph layer "
+                 "is normally hidden. Turn it back on to see OSD content the recogniser does "
+                 "not know about - a tuning page, say - at the cost of the recognised fields "
+                 "flickering through underneath.");
+
+        add_check(
+            box,
+            "Outline text",
+            [this] { return theme_.text_outline; },
+            [this](bool v) { theme_.text_outline = v; });
+
+        add_color(box, OsdColorField{"text_outline_color", "Outline colour",
+                                     &OsdTheme::text_outline_color});
+
+        add_slider(
+            box,
+            "Outline width",
+            1.0f,
+            3.0f,
+            true,
+            [this] { return static_cast<float>(theme_.text_outline_width); },
+            [this](float v) { theme_.text_outline_width = static_cast<int>(std::lround(v)); });
+
+        add_note(box,
+                 "Every outline on screen uses this colour, the compass included. Light text "
+                 "over bright ground is unreadable without it.");
     }
 
     // --- per-element on/off, the thing you actually retune between flights ---
@@ -186,17 +219,26 @@ void OsdContainer::on_ready() {
             },
             [this](int i) { theme_.map_style = kStyles[i]; });
 
-        static const std::vector<std::string> kOrientations = {"north", "track"};
+        static const std::vector<std::string> kOrientations = {"north", "track", "heading"};
         add_choice(
             box,
             "Up is",
             kOrientations,
-            [this] { return theme_.map_orientation == "track" ? 1 : 0; },
+            [this] {
+                for (size_t i = 0; i < kOrientations.size(); i++) {
+                    if (kOrientations[i] == theme_.map_orientation) {
+                        return static_cast<int>(i);
+                    }
+                }
+                return 0;
+            },
             [this](int i) { theme_.map_orientation = kOrientations[i]; });
 
         add_note(box,
-                 "Track-up turns the map under the aircraft, so what is ahead is always at "
-                 "the top. A compass needle is drawn because north no longer is.");
+                 "Either turning mode puts what is ahead at the top, and a compass needle is "
+                 "drawn because north no longer is. Track-up follows where the aircraft is "
+                 "going; heading-up follows where the nose points, which is what agrees with "
+                 "a nose-mounted camera. In wind the two differ.");
 
         add_slider(
             box,
@@ -361,6 +403,112 @@ void OsdContainer::on_ready() {
             "Font",
             [this] { return theme_.font_path; },
             [this](const std::string& v) { theme_.font_path = v; });
+    }
+
+    // --- compass ------------------------------------------------------------
+    {
+        auto box = add_section(root, "Compass", true);
+
+        add_note(box,
+                 "Where the compass goes is set on the flight controller - it lands wherever "
+                 "you placed the compass bar in the OSD tab. Only the look is set here. The "
+                 "heading itself comes from the attitude stream, not from the bar's glyphs, "
+                 "so it stays smooth however coarse the bar is.");
+
+        static const std::vector<std::string> kHeadingStyles = {
+            "band", "rose", "ring", "navball", "numeric"};
+        add_choice(
+            box,
+            "Style",
+            kHeadingStyles,
+            [this] {
+                for (size_t i = 0; i < kHeadingStyles.size(); i++) {
+                    if (kHeadingStyles[i] == theme_.heading_style) {
+                        return static_cast<int>(i);
+                    }
+                }
+                return 0;
+            },
+            [this](int i) { theme_.heading_style = kHeadingStyles[i]; });
+
+        add_note(box,
+                 "band - a scrolling tape, the way a jet HUD does it. rose - a round dial, "
+                 "nose up. ring - the tape in perspective with the centre magnified. navball "
+                 "- a sphere carrying pitch and bank as well. numeric - just the number.");
+
+        add_slider(
+            box,
+            "Size",
+            60.0f,
+            1200.0f,
+            true,
+            [this] { return theme_.heading_size; },
+            [this](float v) { theme_.heading_size = v; });
+
+        add_note(box,
+                 "Band and ring width, or rose and navball diameter. Neither firmware lets "
+                 "you widen the bar itself, so this is where the size comes from.");
+
+        add_slider(
+            box,
+            "Band span",
+            45.0f,
+            120.0f,
+            true,
+            [this] { return theme_.heading_span; },
+            [this](float v) { theme_.heading_span = v; });
+
+        add_note(box,
+                 "Degrees visible end to end on the band. Narrow reads fast in a turn, wide "
+                 "gives more context.");
+
+        add_check(
+            box,
+            "Mark the ground track",
+            [this] { return theme_.heading_show_track; },
+            [this](bool v) { theme_.heading_show_track = v; });
+
+        add_note(box,
+                 "A second marker at the course over ground. On a wing in wind that is where "
+                 "you are actually going, which is not where the nose points - and the gap "
+                 "between the two is invisible in the video feed.");
+
+        add_check(
+            box,
+            "Flip the ring",
+            [this] { return theme_.heading_flip; },
+            [this](bool v) { theme_.heading_flip = v; });
+
+        add_slider(
+            box,
+            "Ring lens",
+            0.3f,
+            1.0f,
+            false,
+            [this] { return theme_.heading_lens; },
+            [this](float v) { theme_.heading_lens = v; });
+
+        add_note(box, "Below 1 the centre of the ring is magnified. 1 is a flat tape.");
+
+        add_check(
+            box,
+            "Outline the compass",
+            [this] { return theme_.heading_outline; },
+            [this](bool v) { theme_.heading_outline = v; });
+
+        add_slider(
+            box,
+            "Compass outline width",
+            1.0f,
+            5.0f,
+            false,
+            [this] { return theme_.heading_outline_width; },
+            [this](float v) { theme_.heading_outline_width = v; });
+
+        add_note(box,
+                 "Outlines the ticks and markers, not just the numbers - a compass is thin "
+                 "lines over live video, and thin lines over snow or sky disappear. Uses the "
+                 "outline colour from the OSD section.");
     }
 
     // --- battery ------------------------------------------------------------

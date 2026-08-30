@@ -31,6 +31,11 @@ enum OsdElement {
     OSD_EL_FLIGHT_TIME,
     OSD_EL_FLIGHT_MODE,
     OSD_EL_WARNING,
+    // The compass bar. It has no reading of its own - the run of arrow glyphs
+    // only says where the display goes, and the heading comes from
+    // MSP_ATTITUDE - so the opacity and scale here move the compass, and
+    // turning it off leaves the flight controller's own bar showing.
+    OSD_EL_HEADING_BAR,
     OSD_EL_COUNT,
 };
 
@@ -54,6 +59,11 @@ struct OsdTheme {
     bool fancy = true; // false = the flight controller's own glyph text
     float global_opacity = 1.0f;
     float global_scale = 1.0f;
+    // Widgets replace the flight controller's text, so its glyph layer is
+    // normally not drawn. Turning it back on shows OSD content the recogniser
+    // does not know about - a tuning page, say - at the cost of the recognised
+    // fields flickering through underneath.
+    bool glyphs = false;
 
     // [theme]
     std::string name = "Tactical";
@@ -72,6 +82,11 @@ struct OsdTheme {
     float hatch_duty = 0.64f;
     float hatch_slant = -0.45f;
     float element_hold_ms = 2000.0f;
+    // Outline behind every string, and the colour every outline uses - the
+    // compass picks this colour up for its ticks and markers too.
+    bool text_outline = true;
+    uint32_t text_outline_color = 0xC0000000;
+    int text_outline_width = 1;
 
     // [colors], 0xAARRGGBB
     uint32_t accent = 0xFF00E5FF;
@@ -111,8 +126,10 @@ struct OsdTheme {
     // [map]
     bool map_enabled = true;
     std::string map_style = "hybrid"; // roads | satellite | hybrid
-    // north = north stays up; track = the map turns so the ground track is up,
-    // and msposd draws a compass needle because north no longer is.
+    // north = north stays up; track = the map turns so the ground track is up;
+    // heading = it turns with the nose, which is what agrees with a
+    // nose-mounted camera - in wind the two differ. Either turning mode costs a
+    // fixed frame of reference, so msposd draws a compass needle.
     std::string map_orientation = "north";
     int map_zoom = 16;                // used when auto_zoom is off
     float map_opacity = 1.0f;
@@ -127,6 +144,17 @@ struct OsdTheme {
     int map_max_width = 420;
     int map_max_height = 300;
     std::string map_cache_dir = "/tmp/msposd-tiles";
+
+    // [heading]. Where the display goes is the flight controller's business -
+    // wherever the compass bar is placed - so only the look is set here.
+    std::string heading_style = "band"; // band | rose | ring | navball | numeric
+    float heading_size = 480.0f;        // band/ring width, or rose/navball diameter
+    float heading_span = 90.0f;         // band only: degrees visible end to end
+    bool heading_show_track = true;     // a second marker at the ground course
+    bool heading_flip = false;          // ring only: curve the other way
+    float heading_lens = 0.62f;         // ring only: <1 magnifies the centre
+    bool heading_outline = true;        // outline the ticks and markers, not just the text
+    float heading_outline_width = 2.0f;
 
     OsdTheme();
 
