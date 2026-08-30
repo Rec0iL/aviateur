@@ -29,8 +29,16 @@ struct OsdLinkStats {
     float bitrate_mbps = -1.0f;
 };
 
-/// Where the stats file lives. Alongside the theme, because the two are a pair:
-/// the theme says where to draw the widget, this says what to put in it.
+/// Where the stats file lives.
+///
+/// The same rule msposd applies when its theme does not name a path:
+/// `$MSPOSD_LINK_STATS` if set, otherwise /tmp/msposd-link.ini. Both ends
+/// resolving it identically is the point - it means the widget works with
+/// nothing configured at either end.
+///
+/// Not the app data directory, where the theme lives: this is a runtime file
+/// two processes share, not configuration, and msposd has no business knowing
+/// where Aviateur keeps its settings.
 std::string osd_link_stats_path();
 
 /// Writes `stats` to `path`. False if the file could not be written, which the

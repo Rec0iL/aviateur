@@ -254,10 +254,9 @@ std::string osd_format_color(const uint32_t argb) {
 }
 
 OsdTheme::OsdTheme() {
-    // Point the link widget at where Aviateur publishes its statistics, so it
-    // works out of the box rather than needing the user to find the path. A
-    // theme file that says otherwise still wins - this is only the default.
-    link_source = osd_link_stats_path();
+    // Left empty on purpose. msposd resolves an empty source the same way this
+    // writer resolves its destination, so the two find each other with nothing
+    // written here; the key exists for a layout that needs something else.
     elem_enabled.fill(true);
     elem_opacity.fill(1.0f);
     elem_scale.fill(1.0f);
@@ -345,6 +344,14 @@ bool OsdTheme::load(const std::string& path) {
     get_float(ini, "link", "scale", &link_scale);
     get_float(ini, "link", "opacity", &link_opacity);
     get_string(ini, "link", "source", &link_source);
+    // Early builds seeded this with an absolute path inside the app data
+    // directory. That is no longer where the stats are published, and a theme
+    // carrying it would point msposd at a file nobody writes - so it is cleared
+    // rather than left to silently disable the widget.
+    if (!link_source.empty() && link_source.find("/osd-link.ini") != std::string::npos &&
+        link_source != osd_link_stats_path()) {
+        link_source.clear();
+    }
     get_float(ini, "link", "hold_ms", &link_hold_ms);
 
     get_bool(ini, "map", "enabled", &map_enabled);

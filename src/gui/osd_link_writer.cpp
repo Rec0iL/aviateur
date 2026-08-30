@@ -1,12 +1,14 @@
 #include "osd_link_writer.h"
 
-#include "../gui_interface.h"
-
 #include <cstdio>
 #include <cstdlib>
 
 std::string osd_link_stats_path() {
-    return GuiInterface::GetAppDataDir() + "osd-link.ini";
+    const char *env = getenv("MSPOSD_LINK_STATS");
+    if (env && env[0]) {
+        return env;
+    }
+    return "/tmp/msposd-link.ini";
 }
 
 bool osd_write_link_stats(const std::string &path, const OsdLinkStats &stats) {
