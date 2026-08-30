@@ -781,6 +781,7 @@ void WfbngLink::handle_80211_frame(const Packet &packet) {
                 ls.loss_pct = loss;
                 ls.quality_pct = loss > 100.0f ? 0.0f : 100.0f - loss;
             }
+            ls.bitrate_mbps = osd_link_bitrate_mbps();
             osd_write_link_stats(osd_link_stats_path(), ls);
         }
     }

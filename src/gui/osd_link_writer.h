@@ -41,6 +41,20 @@ struct OsdLinkStats {
 /// where Aviateur keeps its settings.
 std::string osd_link_stats_path();
 
+/// Notes the decoder's current bitrate, in bits per second, for the next write.
+///
+/// The decoder reports this already and the GUI shows it; the widget needs the
+/// same number and this is the cheapest way to reach it from the receiver
+/// thread that does the writing.
+void osd_link_note_bitrate(unsigned long long bits_per_second);
+
+/// The last noted bitrate as megabits per second, or -1 before there is one.
+///
+/// Divided by 1e6, not by 1024x1024. Aviateur's own readout uses the latter and
+/// calls the result "Mbps", which is off by five percent - matching that here
+/// would be copying a mislabel into a second place.
+float osd_link_bitrate_mbps();
+
 /// Writes `stats` to `path`. False if the file could not be written, which the
 /// caller is free to ignore - a missing stats file just means no widget.
 bool osd_write_link_stats(const std::string &path, const OsdLinkStats &stats);

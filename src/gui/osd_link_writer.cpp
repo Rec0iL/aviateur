@@ -1,7 +1,22 @@
 #include "osd_link_writer.h"
 
+#include <atomic>
 #include <cstdio>
 #include <cstdlib>
+
+namespace {
+// Noted on the decode thread, read on the receiver thread that writes the file.
+std::atomic<unsigned long long> g_bits_per_second{0};
+} // namespace
+
+void osd_link_note_bitrate(unsigned long long bits_per_second) {
+    g_bits_per_second.store(bits_per_second, std::memory_order_relaxed);
+}
+
+float osd_link_bitrate_mbps() {
+    const unsigned long long b = g_bits_per_second.load(std::memory_order_relaxed);
+    return b == 0 ? -1.0f : (float)((double)b / 1.0e6);
+}
 
 std::string osd_link_stats_path() {
     const char *env = getenv("MSPOSD_LINK_STATS");

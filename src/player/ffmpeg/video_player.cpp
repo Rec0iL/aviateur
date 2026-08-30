@@ -1,5 +1,7 @@
 #include "video_player.h"
 
+#include "../../gui/osd_link_writer.h"
+
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_audio.h>
 #include <libavutil/frame.h>
@@ -140,6 +142,10 @@ void VideoPlayerFfmpeg::play(const std::string &playUrl, bool forceSoftwareDecod
         // Bitrate callback.
         localDecoder->bitrateUpdateCallback = [](uint64_t bitrate) {
             GuiInterface::Instance().EmitBitrateUpdate(bitrate);
+            // The same figure for msposd's link widget. Throughput belongs to
+            // the stream rather than the radio, so it is the one number the
+            // widget can show whatever the link underneath is.
+            osd_link_note_bitrate(bitrate);
         };
 
         // Handle dynamic resolution change

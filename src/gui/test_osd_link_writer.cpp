@@ -39,6 +39,8 @@ struct OsdLinkStats {
 };
 bool osd_write_link_stats(const std::string &path, const OsdLinkStats &stats);
 std::string osd_link_stats_path();
+void osd_link_note_bitrate(unsigned long long bits_per_second);
+float osd_link_bitrate_mbps();
 
 int fails = 0;
 static void ck(const char *n, bool ok) { printf("  %-46s %s\n", n, ok ? "PASS" : "FAIL"); if (!ok) fails++; }
@@ -78,6 +80,18 @@ int main() {
     ck("quality",   r.quality_pct > 96.9f && r.quality_pct < 97.1f);
     ck("loss",      r.loss_pct > 0.41f && r.loss_pct < 0.43f);
     ck("bitrate stays absent", r.bitrate_mbps < 0.0f);
+
+    // The decoder's figure, in proper megabits - not Aviateur's own readout,
+    // which divides by 1024x1024 and still calls it Mbps.
+    ck("no bitrate before the decoder reports one", osd_link_bitrate_mbps() < 0.0f);
+    osd_link_note_bitrate(12400000ULL);
+    ck("12.4 Mbps, not 11.8", osd_link_bitrate_mbps() > 12.39f && osd_link_bitrate_mbps() < 12.41f);
+    OsdLinkStats w3 = w;
+    w3.bitrate_mbps = osd_link_bitrate_mbps();
+    osd_write_link_stats(p, w3);
+    memset(&r, 0, sizeof(r));
+    osd_link_stats_load(p.c_str(), &r, 1000);
+    ck("bitrate survives the round trip", r.bitrate_mbps > 12.3f && r.bitrate_mbps < 12.5f);
 
     // A silent antenna must not be published at all.
     OsdLinkStats w2;
