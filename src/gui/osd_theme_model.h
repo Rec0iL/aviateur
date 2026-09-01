@@ -203,9 +203,9 @@ struct OsdTheme {
 
     OsdTheme();
 
-    /// Merges `path` over whatever is already here, the way msposd does: a key
-    /// that is absent or malformed keeps its current value, so a half-written
-    /// file cannot blank the theme.
+    /// Merges `path`, and anything it inherits from, over whatever is already
+    /// here - the way msposd does: a key that is absent or malformed keeps its
+    /// current value, so a half-written file cannot blank the theme.
     bool load(const std::string& path);
 
     /// Writes the values back. An existing file is updated in place, which keeps
@@ -217,9 +217,51 @@ struct OsdTheme {
     /// theme file does not exist yet.
     bool write_seed(const std::string& path) const;
 
+    /// One file of an inheritance chain, applied over what is already here.
+    bool load_one(const std::string& path);
+
     /// The editable colours, in the order they should be shown.
     static const std::array<OsdColorField, 10>& color_fields();
 };
+
+/// One theme folder found beside the others.
+struct OsdThemeEntry {
+    std::string id;   ///< folder name, which is what the picker stores
+    std::string name; ///< the theme's own [theme] name, for showing
+    std::string path; ///< the theme.ini inside it
+};
+
+/// Where theme folders live, or "" when none of the candidates holds one.
+///
+/// First of `$OSD_THEMES`, `<folder of the active theme>/themes`,
+/// /etc/msposd/themes, /usr/share/msposd/themes - the same list, in the same
+/// order, that PixelPilot's gsmenu.sh walks. Both ends offering the pilot a
+/// different set of themes would be worse than neither offering any.
+///
+/// A folder counts only once it actually holds a theme, so an empty
+/// /etc/msposd/themes left behind by a package does not hide the one with the
+/// themes in it.
+std::string osd_themes_dir(const std::string& active_theme_path);
+
+/// The themes in that folder, by folder name.
+std::vector<OsdThemeEntry> osd_list_themes(const std::string& active_theme_path);
+
+/// Which of them the active theme is: by identity first, since msposd may be
+/// pointed straight at one, then by the name inside it, which is how a copy is
+/// recognised. "" for a theme of the pilot's own.
+std::string osd_current_theme(const std::string& active_theme_path);
+
+/// Replaces the active theme with a copy of `source_theme`.
+///
+/// Choosing a theme means the OSD looks like that theme - so this replaces the
+/// file rather than merging into it, and keeps the previous one beside it as
+/// `.bak`, which is the only copy of whatever was customised.
+///
+/// A relative `inherit` is rewritten absolute on the way in: `../minimal-orchid`
+/// resolves against the file naming it, and after the copy that file lives
+/// somewhere else entirely, so the copy would quietly lose everything it
+/// inherits.
+bool osd_apply_theme(const std::string& source_theme, const std::string& active_theme_path);
 
 /// "RRGGBB" / "AARRGGBB", with or without a leading '#'. False on anything else,
 /// so a half-typed value leaves the colour alone instead of blanking it.

@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
@@ -264,7 +265,52 @@ OsdTheme::OsdTheme() {
     elem_scale[OSD_EL_SATS] = 0.7f;
 }
 
+/// The chain a theme names with `[theme] inherit`, parents first.
+///
+/// The minimal-* palettes are one colour block each and inherit their layout,
+/// so a reader that ignored the key would show them as colours over defaults -
+/// not what msposd draws. Its two rules are copied exactly: the path resolves
+/// against the file that names it, not against the working directory, and the
+/// chain stops after four, so a theme inheriting from itself cannot hang us.
+static std::vector<std::string> theme_chain(const std::string& path) {
+    std::vector<std::string> chain;
+    std::string current = path;
+    for (int depth = 0; depth < 5 && !current.empty(); depth++) {
+        mINI::INIFile file(current);
+        mINI::INIStructure ini;
+        if (!file.read(ini)) {
+            break;
+        }
+        chain.insert(chain.begin(), current);
+
+        std::string rel;
+        if (depth == 4 || !get_raw(ini, "theme", "inherit", &rel)) {
+            break;
+        }
+        const std::filesystem::path parent(rel);
+        current = parent.is_absolute()
+                      ? parent.lexically_normal().string()
+                      : (std::filesystem::path(current).parent_path() / parent).lexically_normal().string();
+    }
+    return chain;
+}
+
 bool OsdTheme::load(const std::string& path) {
+    const std::vector<std::string> chain = theme_chain(path);
+    if (chain.empty()) {
+        return false;
+    }
+    // Parents first, the named theme last: a key it sets has to win over the
+    // same key inherited, and every getter below only writes when the key is
+    // there, so this layers exactly the way msposd's loader does.
+    bool ok = false;
+    for (const auto& file : chain) {
+        ok = load_one(file) || ok;
+    }
+    return ok;
+}
+
+bool OsdTheme::load_one(const std::string& path) {
     mINI::INIFile file(path);
     mINI::INIStructure ini;
     if (!file.read(ini)) {
@@ -376,6 +422,190 @@ bool OsdTheme::load(const std::string& path) {
     get_int(ini, "map", "max_height", &map_max_height);
     get_string(ini, "map", "cache_dir", &map_cache_dir);
 
+    return true;
+}
+
+namespace {
+
+/// The theme.ini files directly inside `dir`, sorted by folder name.
+std::vector<std::filesystem::path> theme_files_in(const std::filesystem::path& dir) {
+    std::vector<std::filesystem::path> found;
+    std::error_code ec;
+    if (!std::filesystem::is_directory(dir, ec)) {
+        return found;
+    }
+    for (const auto& entry : std::filesystem::directory_iterator(dir, ec)) {
+        if (ec) {
+            break;
+        }
+        const auto file = entry.path() / "theme.ini";
+        if (std::filesystem::is_regular_file(file, ec)) {
+            found.push_back(file);
+        }
+    }
+    std::sort(found.begin(), found.end());
+    return found;
+}
+
+/// The [theme] name of one file, read through its own chain so a variant that
+/// does not name itself still answers with the family name rather than blank.
+std::string theme_name_of(const std::string& path) {
+    OsdTheme t;
+    t.name.clear();
+    if (!t.load(path)) {
+        return "";
+    }
+    return t.name;
+}
+
+std::string canonical_or_self(const std::string& path) {
+    std::error_code ec;
+    const auto c = std::filesystem::weakly_canonical(path, ec);
+    return ec ? path : c.string();
+}
+
+} // namespace
+
+std::string osd_themes_dir(const std::string& active_theme_path) {
+    std::vector<std::filesystem::path> candidates;
+    if (const char* env = getenv("OSD_THEMES"); env && env[0]) {
+        candidates.emplace_back(env);
+    }
+    if (!active_theme_path.empty()) {
+        candidates.push_back(std::filesystem::path(active_theme_path).parent_path() / "themes");
+    }
+    candidates.emplace_back("/etc/msposd/themes");
+    candidates.emplace_back("/usr/share/msposd/themes");
+
+    for (const auto& dir : candidates) {
+        if (!theme_files_in(dir).empty()) {
+            return dir.string();
+        }
+    }
+    return "";
+}
+
+std::vector<OsdThemeEntry> osd_list_themes(const std::string& active_theme_path) {
+    std::vector<OsdThemeEntry> themes;
+    const std::string dir = osd_themes_dir(active_theme_path);
+    if (dir.empty()) {
+        return themes;
+    }
+    for (const auto& file : theme_files_in(dir)) {
+        OsdThemeEntry entry;
+        entry.id = file.parent_path().filename().string();
+        entry.path = file.string();
+        entry.name = theme_name_of(entry.path);
+        if (entry.name.empty()) {
+            entry.name = entry.id;
+        }
+        themes.push_back(entry);
+    }
+    return themes;
+}
+
+std::string osd_current_theme(const std::string& active_theme_path) {
+    const auto themes = osd_list_themes(active_theme_path);
+    if (themes.empty()) {
+        return "";
+    }
+    const std::string active = canonical_or_self(active_theme_path);
+    for (const auto& theme : themes) {
+        if (canonical_or_self(theme.path) == active) {
+            return theme.id;
+        }
+    }
+    const std::string name = theme_name_of(active_theme_path);
+    if (!name.empty()) {
+        for (const auto& theme : themes) {
+            if (theme.name == name) {
+                return theme.id;
+            }
+        }
+    }
+    return "";
+}
+
+bool osd_apply_theme(const std::string& source_theme, const std::string& active_theme_path) {
+    if (source_theme.empty() || active_theme_path.empty()) {
+        return false;
+    }
+    if (canonical_or_self(source_theme) == canonical_or_self(active_theme_path)) {
+        return true; // already editing that file
+    }
+
+    std::ifstream in(source_theme);
+    if (!in) {
+        return false;
+    }
+
+    // Line by line rather than through mINI: the file is copied, and the
+    // comments in it are half of what a theme is worth.
+    const std::filesystem::path source_dir = std::filesystem::path(source_theme).parent_path();
+    std::string text;
+    std::string line;
+    std::string section;
+    while (std::getline(in, line)) {
+        // strip_comment also trims, so a comment line comes back empty and a
+        // section header keeps its brackets.
+        const std::string trimmed = strip_comment(line);
+        if (!trimmed.empty() && trimmed[0] == '[') {
+            const size_t end = trimmed.find(']');
+            if (end != std::string::npos) {
+                section = lower(strip_comment(trimmed.substr(1, end - 1)));
+            }
+        } else if (!trimmed.empty() && section == "theme") {
+            const size_t eq = line.find('=');
+            if (eq != std::string::npos && lower(strip_comment(line.substr(0, eq))) == "inherit") {
+                const std::string rel = strip_comment(line.substr(eq + 1));
+                if (!rel.empty() && !std::filesystem::path(rel).is_absolute()) {
+                    // Absolute against the filesystem, not merely joined: the
+                    // themes folder may itself have been named relatively, and a
+                    // relative parent written into the copy would resolve
+                    // against the copy's own folder - which is the very thing
+                    // this rewrite is here to prevent.
+                    std::error_code rc;
+                    std::filesystem::path parent =
+                        std::filesystem::weakly_canonical(source_dir / rel, rc);
+                    if (rc) {
+                        parent = std::filesystem::absolute(source_dir / rel, rc).lexically_normal();
+                    }
+                    line = line.substr(0, eq + 1) + " " + parent.string();
+                }
+            }
+        }
+        text += line;
+        text += "\n";
+    }
+    in.close();
+
+    std::error_code ec;
+    const std::filesystem::path active(active_theme_path);
+    std::filesystem::create_directories(active.parent_path(), ec);
+
+    // Written beside the target and renamed over it: msposd polls the mtime and
+    // would otherwise be able to read a half-copied theme.
+    const std::filesystem::path tmp = active_theme_path + ".new";
+    {
+        std::ofstream out(tmp, std::ios::binary | std::ios::trunc);
+        if (!out) {
+            return false;
+        }
+        out << text;
+        if (!out) {
+            return false;
+        }
+    }
+
+    if (std::filesystem::exists(active, ec)) {
+        std::filesystem::copy_file(active, active_theme_path + ".bak",
+                                   std::filesystem::copy_options::overwrite_existing, ec);
+    }
+    std::filesystem::rename(tmp, active, ec);
+    if (ec) {
+        std::filesystem::remove(tmp, ec);
+        return false;
+    }
     return true;
 }
 

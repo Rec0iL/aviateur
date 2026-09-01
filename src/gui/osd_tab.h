@@ -10,6 +10,13 @@
 // Saving is debounced rather than immediate because a slider drag produces a
 // change per frame, and each one would otherwise be a file write plus a full
 // re-parse on msposd's side.
+//
+// The theme picker at the top is the exception: it replaces the theme file with
+// a copy of the chosen one and reloads, so it applies at once rather than
+// through the debounce. Where the themes are looked for, and why picking one is
+// a reset rather than a layer, is written down in msposd's
+// osd/widgets/README.md under "Picking one" - PixelPilot's gsmenu follows the
+// same rule and the pilot should get the same list from either.
 
 #include <functional>
 #include <string>

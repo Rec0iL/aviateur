@@ -77,6 +77,101 @@ void OsdContainer::on_ready() {
     root->container_sizing.flag_h = vecgui::ContainerSizingFlag::Fill;
     scroll->add_child(root);
 
+    // --- which theme, out of the folder of them ------------------------------
+    //
+    // Before this the pilot had to know where the theme file goes and copy one
+    // there by hand. Picking one here does exactly that copy - it is not a knob
+    // on top of the others, it is what they all start from, so it sits above
+    // them and applies at once rather than through the debounced save.
+    {
+        auto box = add_section(root, "Theme", false);
+
+        const auto themes = osd_list_themes(theme_path_);
+        if (themes.empty()) {
+            add_note(box,
+                     "No theme folder found. Themes are folders holding a theme.ini, looked for "
+                     "in $OSD_THEMES, then beside the theme file, then /etc/msposd/themes and "
+                     "/usr/share/msposd/themes. Point $OSD_THEMES at msposd/themes to pick from "
+                     "the ones shipped there.");
+        } else {
+            std::vector<std::string> labels;
+            labels.reserve(themes.size() + 1);
+            for (const auto& theme : themes) {
+                labels.push_back(theme.name);
+            }
+            // A theme of the pilot's own is a real answer, and a dropdown has to
+            // show something: showing a neighbour would claim a theme is active
+            // that is not. It is last so the index of a real theme is its own.
+            labels.emplace_back("Custom (this file)");
+            const size_t custom_index = labels.size() - 1;
+
+            auto current_index = [this, themes, custom_index] {
+                const std::string id = osd_current_theme(theme_path_);
+                for (size_t i = 0; i < themes.size(); i++) {
+                    if (themes[i].id == id) {
+                        return static_cast<int>(i);
+                    }
+                }
+                return static_cast<int>(custom_index);
+            };
+
+            auto row = make_row(box, "Theme", 96);
+            auto button = std::make_shared<vecgui::MenuButton>();
+            button->container_sizing.flag_h = vecgui::ContainerSizingFlag::Fill;
+            row->add_child(button);
+            auto menu = button->get_popup_menu().lock();
+            for (const auto& label : labels) {
+                menu->create_item(label);
+            }
+            button->select_item(current_index());
+
+            // Weak, because the button owns the signal that owns this lambda.
+            std::weak_ptr<vecgui::MenuButton> weak_button = button;
+            button->connect_signal("item_selected", [this, themes, custom_index, current_index,
+                                                        weak_button](const uint32_t index) {
+                // "Custom" is a state, not a choice: there is nothing to apply,
+                // so the row goes back to naming what is actually in the file.
+                // select_item does not re-emit, which is what the refreshers
+                // below rely on too.
+                if (index >= custom_index) {
+                    if (auto b = weak_button.lock()) {
+                        b->select_item(current_index());
+                    }
+                    return;
+                }
+                // Anything unsaved goes to the file first: the backup this makes
+                // is the only copy of what was there, and it should hold what the
+                // pilot last did rather than what was on disk before it.
+                if (dirty_) {
+                    save_now();
+                }
+                const auto& chosen = themes[index];
+                if (!osd_apply_theme(chosen.path, theme_path_)) {
+                    set_status("Could not apply " + chosen.name);
+                    return;
+                }
+                // From defaults, not over the current theme: a key the new theme
+                // does not mention should read as msposd's default, not as
+                // whatever the old theme happened to set.
+                theme_ = OsdTheme();
+                theme_.load(theme_path_);
+                dirty_ = false;
+                idle_since_change_ = 0.0;
+                for (const auto& refresh : refreshers_) {
+                    refresh();
+                }
+                set_status(chosen.name + " applied - the previous theme is kept as .bak");
+            });
+            refreshers_.emplace_back([button, current_index] { button->select_item(current_index()); });
+
+            add_note(box,
+                     "Picking a theme replaces the theme file with a copy of that one, so the "
+                     "settings below start again from what it says. The file it replaces is kept "
+                     "beside it as .bak.");
+            add_note(box, osd_themes_dir(theme_path_));
+        }
+    }
+
     // --- what is drawn at all -----------------------------------------------
     {
         auto box = add_section(root, "OSD", false);
