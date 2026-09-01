@@ -14,7 +14,9 @@
 //   gcc -c -w -I $MSPOSD -D_GNU_SOURCE -o /tmp/link.o \
 //       $MSPOSD/osd/widgets/osd_link_stats.c
 //   gcc -c -w -I $PIXELPILOT/src -o /tmp/ppwriter.o \
-//       $PIXELPILOT/src/osd_link_writer.c
+//       -Dosd_link_stats_path=pp_osd_link_stats_path \
+//       -Dosd_link_channel_from_mhz=pp_osd_link_channel_from_mhz \
+//       $PIXELPILOT/src/osd_link_writer.c   # renamed: both ends define them
 //   g++ -Wall -I $MSPOSD -I src/gui -I $PIXELPILOT/src -D_GNU_SOURCE \
 //       -o /tmp/test_link src/gui/test_osd_link_writer.cpp \
 //       src/gui/osd_link_writer.cpp /tmp/link.o /tmp/ppwriter.o -lm
